@@ -8,8 +8,8 @@ import { buildAssignments } from "@/lib/assignmentEngine";
 import { downloadCsv } from "@/lib/downloadCsv";
 import {
   Upload, Video, Shuffle, BarChart2, CheckCircle, AlertCircle,
-  ChevronRight, FileText, Loader2, X, Plus, ExternalLink, Trash2,
-  Info, Mail, Download, RotateCcw, TriangleAlert,
+  FileText, Loader2, X, Plus, ExternalLink, Trash2,
+  Info, Download, RotateCcw, TriangleAlert, FileUp,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -18,8 +18,9 @@ type UploadStatus = "idle" | "parsing" | "inserting" | "success" | "error";
 type ActionStatus = "idle" | "loading" | "success" | "error";
 
 interface ParsedStudent  { name: string; email: string; }
+interface ParsedPitch    { title: string; url: string; author_emails: string; }
 interface ImportResult   { inserted: number; skipped: number; errors: string[]; }
-interface VideoRow       { id: string; title: string; url: string; elo_rating: number; }
+interface VideoRow       { id: string; title: string; url: string; elo_rating: number; author_emails: string | null; }
 interface GenerateResult { assignments: number; students: number; clampedTo?: number; }
 
 const tabs = [
@@ -29,7 +30,7 @@ const tabs = [
   { id: "progress",    label: "Progress",      icon: BarChart2 },
 ];
 
-function downloadTemplate() {
+function downloadRosterTemplate() {
   const csv = "Name,Email\nJane Smith,jane@university.edu\nJohn Doe,john@university.edu\n";
   const blob = new Blob([csv], { type: "text/csv" });
   const url  = URL.createObjectURL(blob);
@@ -38,24 +39,55 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
+function downloadPitchTemplate() {
+  const csv = [
+    "title,url,author_emails",
+    '"Pitch Alpha",https://www.youtube.com/watch?v=dQw4w9WgXcQ,"alice@uni.edu, bob@uni.edu"',
+    '"Pitch Beta",https://youtu.be/xxxxxxxxxxx,charlie@uni.edu',
+  ].join("\n") + "\n";
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "pitches_template.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Convert any YouTube URL variant to a canonical watch?v= URL for storage. */
+function normalizeVideoUrl(raw: string): string {
+  const trimmed = raw.trim();
+  const m = trimmed.match(
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
+  return m ? `https://www.youtube.com/watch?v=${m[1]}` : trimmed;
+}
+
+/** Trim whitespace and lowercase each email in a comma-separated string. */
+function normalizeAuthorEmails(raw: string): string {
+  return raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .join(", ");
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function RoomDashboardPage() {
   const { roomId } = useParams<{ roomId: string }>();
 
   // Room meta
-  const [roomName, setRoomName]   = useState<string>("");
+  const [roomName, setRoomName]         = useState<string>("");
   const [roomNotFound, setRoomNotFound] = useState(false);
 
-  // Upload state
-  const [activeTab, setActiveTab]           = useState("upload");
-  const [fileName, setFileName]             = useState<string | null>(null);
-  const [parsedRows, setParsedRows]         = useState<ParsedStudent[]>([]);
-  const [parseWarnings, setParseWarnings]   = useState<string[]>([]);
-  const [uploadStatus, setUploadStatus]     = useState<UploadStatus>("idle");
-  const [importResult, setImportResult]     = useState<ImportResult | null>(null);
-  const [isDragging, setIsDragging]         = useState(false);
-  const fileInputRef                        = useRef<HTMLInputElement>(null);
+  // Roster upload state
+  const [activeTab, setActiveTab]         = useState("upload");
+  const [fileName, setFileName]           = useState<string | null>(null);
+  const [parsedRows, setParsedRows]       = useState<ParsedStudent[]>([]);
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+  const [uploadStatus, setUploadStatus]   = useState<UploadStatus>("idle");
+  const [importResult, setImportResult]   = useState<ImportResult | null>(null);
+  const [isDragging, setIsDragging]       = useState(false);
+  const fileInputRef                      = useRef<HTMLInputElement>(null);
 
   // Video state
   const [videos, setVideos]               = useState<VideoRow[]>([]);
@@ -66,14 +98,23 @@ export default function RoomDashboardPage() {
   const [addError, setAddError]           = useState<string | null>(null);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
 
+  // Bulk pitch upload state
+  const [bulkFile, setBulkFile]           = useState<string | null>(null);
+  const [bulkRows, setBulkRows]           = useState<ParsedPitch[]>([]);
+  const [bulkWarnings, setBulkWarnings]   = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus]       = useState<UploadStatus>("idle");
+  const [bulkCount, setBulkCount]         = useState<number>(0);
+  const [bulkDragging, setBulkDragging]   = useState(false);
+  const bulkInputRef                      = useRef<HTMLInputElement>(null);
+
   // Assignment state
   const [comparisonsPerStudent, setComparisonsPerStudent] = useState(5);
-  const [genStatus, setGenStatus]   = useState<ActionStatus>("idle");
-  const [genResult, setGenResult]   = useState<GenerateResult | null>(null);
-  const [genError, setGenError]     = useState<string | null>(null);
+  const [genStatus, setGenStatus] = useState<ActionStatus>("idle");
+  const [genResult, setGenResult] = useState<GenerateResult | null>(null);
+  const [genError, setGenError]   = useState<string | null>(null);
 
   // Stats
-  const [studentCount, setStudentCount]     = useState<number | null>(null);
+  const [studentCount, setStudentCount]       = useState<number | null>(null);
   const [assignmentCount, setAssignmentCount] = useState<number | null>(null);
 
   // Maintenance state
@@ -93,7 +134,11 @@ export default function RoomDashboardPage() {
 
   async function fetchVideos() {
     setVideosLoading(true);
-    const { data } = await supabase.from("videos").select("id,title,url,elo_rating").eq("room_id", roomId).order("title");
+    const { data } = await supabase
+      .from("videos")
+      .select("id,title,url,elo_rating,author_emails")
+      .eq("room_id", roomId)
+      .order("title");
     if (data) setVideos(data);
     setVideosLoading(false);
   }
@@ -111,9 +156,10 @@ export default function RoomDashboardPage() {
     fetchRoom();
     fetchVideos();
     fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  // ── CSV upload ─────────────────────────────────────────────────────────────
+  // ── Roster CSV upload ──────────────────────────────────────────────────────
 
   function processFile(file: File) {
     if (!file.name.endsWith(".csv")) {
@@ -185,6 +231,79 @@ export default function RoomDashboardPage() {
     fetchStats();
   }
 
+  // ── Bulk pitch upload ──────────────────────────────────────────────────────
+
+  function processBulkFile(file: File) {
+    if (!file.name.endsWith(".csv")) {
+      setBulkStatus("error");
+      return;
+    }
+    setBulkFile(file.name);
+    setBulkStatus("parsing");
+    setBulkRows([]);
+    setBulkWarnings([]);
+
+    Papa.parse<Record<string, string>>(file, {
+      header: true, skipEmptyLines: true,
+      complete(results) {
+        const warnings: string[] = [];
+        const rows: ParsedPitch[] = [];
+        results.data.forEach((row, i) => {
+          const n: Record<string, string> = {};
+          for (const k of Object.keys(row)) n[k.trim().toLowerCase()] = row[k].trim();
+          const title    = n["title"]         ?? "";
+          const rawUrl   = n["url"]           ?? "";
+          const rawEmail = n["author_emails"] ?? "";
+          if (!title || !rawUrl) {
+            warnings.push(`Row ${i + 2}: missing title or url — skipped.`);
+            return;
+          }
+          rows.push({
+            title,
+            url:           normalizeVideoUrl(rawUrl),
+            author_emails: normalizeAuthorEmails(rawEmail),
+          });
+        });
+        setBulkWarnings(warnings);
+        setBulkRows(rows);
+        setBulkStatus("idle");
+      },
+      error() { setBulkStatus("error"); },
+    });
+  }
+
+  function handleBulkFileInput(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) processBulkFile(file);
+    e.target.value = "";
+  }
+
+  function handleBulkDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault(); setBulkDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processBulkFile(file);
+  }
+
+  function clearBulkFile() {
+    setBulkFile(null); setBulkRows([]); setBulkWarnings([]);
+    setBulkStatus("idle"); setBulkCount(0);
+  }
+
+  async function handleBulkImport() {
+    if (!bulkRows.length) return;
+    setBulkStatus("inserting");
+    const inserts = bulkRows.map((r) => ({ ...r, room_id: roomId }));
+    const { data, error } = await supabase.from("videos").insert(inserts).select();
+    if (error) { setBulkStatus("error"); return; }
+    const count = data?.length ?? 0;
+    setBulkCount(count);
+    setBulkStatus("success");
+    setBulkRows([]);
+    setBulkFile(null);
+    await fetchVideos();
+    fetchStats();
+  }
+
   // ── Video management ───────────────────────────────────────────────────────
 
   async function handleAddVideo(e: React.FormEvent) {
@@ -214,8 +333,8 @@ export default function RoomDashboardPage() {
     setGenStatus("loading"); setGenResult(null); setGenError(null);
 
     const [{ data: students, error: sErr }, { data: vids, error: vErr }] = await Promise.all([
-      supabase.from("students").select("id").eq("room_id", roomId),
-      supabase.from("videos").select("id").eq("room_id", roomId),
+      supabase.from("students").select("id,email").eq("room_id", roomId),
+      supabase.from("videos").select("id,author_emails").eq("room_id", roomId),
     ]);
 
     if (sErr || vErr) { setGenStatus("error"); setGenError(sErr?.message ?? vErr?.message ?? "Failed to fetch data."); return; }
@@ -426,7 +545,7 @@ export default function RoomDashboardPage() {
                   {uploadStatus === "inserting" && <Loader2 className="h-4 w-4 animate-spin" />}
                   {uploadStatus === "inserting" ? "Importing…" : "Import Roster"}
                 </button>
-                <button onClick={downloadTemplate} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-400">
+                <button onClick={downloadRosterTemplate} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-400">
                   <FileText className="h-4 w-4" /> Download Template
                 </button>
               </div>
@@ -438,11 +557,12 @@ export default function RoomDashboardPage() {
             <div className="flex flex-col gap-6">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Manage Pitch Videos</h2>
-                <p className="mt-1 text-sm text-slate-600">Add YouTube, Vimeo, or Google Drive share links.</p>
+                <p className="mt-1 text-sm text-slate-600">Add pitches manually or bulk-import from a CSV.</p>
               </div>
 
+              {/* ── Add a single video manually ── */}
               <form onSubmit={handleAddVideo} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-slate-700">Add a Video</h3>
+                <h3 className="text-sm font-semibold text-slate-700">Add a Video Manually</h3>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <input type="text" placeholder="Video title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required
                     className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
@@ -457,6 +577,105 @@ export default function RoomDashboardPage() {
                 {addError && <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle className="h-3.5 w-3.5" /> {addError}</p>}
               </form>
 
+              {/* ── Bulk Upload Pitches ── */}
+              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700">Bulk Upload Pitches</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      CSV columns:{" "}
+                      <code className="rounded bg-slate-100 px-1">title</code>,{" "}
+                      <code className="rounded bg-slate-100 px-1">url</code>,{" "}
+                      <code className="rounded bg-slate-100 px-1">author_emails</code>.
+                      YouTube Shorts and mobile links are automatically normalised.
+                    </p>
+                  </div>
+                  <button onClick={downloadPitchTemplate}
+                    className="ml-4 flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-slate-400">
+                    <FileText className="h-3.5 w-3.5" /> Template
+                  </button>
+                </div>
+
+                {/* Drop zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setBulkDragging(true); }}
+                  onDragLeave={() => setBulkDragging(false)}
+                  onDrop={handleBulkDrop}
+                  onClick={() => !bulkFile && bulkInputRef.current?.click()}
+                  className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 transition-colors ${bulkDragging ? "border-indigo-500 bg-indigo-50" : bulkFile ? "cursor-default border-emerald-400 bg-emerald-50" : "border-slate-300 bg-white hover:border-indigo-400 hover:bg-indigo-50"}`}>
+                  {bulkFile ? (
+                    <>
+                      <FileUp className="h-7 w-7 text-emerald-500" />
+                      <p className="text-sm font-medium text-slate-700">{bulkFile}</p>
+                      <p className="text-xs text-slate-500">{bulkRows.length} pitch{bulkRows.length !== 1 ? "es" : ""} ready to import</p>
+                      <button onClick={(e) => { e.stopPropagation(); clearBulkFile(); }}
+                        className="absolute right-3 top-3 rounded-full p-1 text-slate-400 hover:bg-slate-200">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="h-7 w-7 text-slate-400" />
+                      <p className="text-sm text-slate-700">Drop pitches CSV or <span className="text-indigo-600 underline">click to browse</span></p>
+                    </>
+                  )}
+                  <input ref={bulkInputRef} type="file" accept=".csv" className="sr-only" onChange={handleBulkFileInput} />
+                </div>
+
+                {bulkWarnings.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="mb-1 text-xs font-semibold text-amber-800">{bulkWarnings.length} row{bulkWarnings.length !== 1 ? "s" : ""} skipped</p>
+                    <ul className="list-disc space-y-0.5 pl-5 text-xs text-amber-700">{bulkWarnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+                  </div>
+                )}
+
+                {bulkRows.length > 0 && bulkStatus !== "success" && (
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Title</th>
+                          <th className="px-4 py-2 text-left">URL (normalised)</th>
+                          <th className="px-4 py-2 text-left">Author Emails</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {bulkRows.slice(0, 5).map((r, i) => (
+                          <tr key={i}>
+                            <td className="px-4 py-2 font-medium text-slate-900">{r.title}</td>
+                            <td className="max-w-[160px] truncate px-4 py-2 text-xs text-slate-500">{r.url}</td>
+                            <td className="px-4 py-2 text-xs text-slate-500">{r.author_emails || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {bulkRows.length > 5 && <p className="bg-slate-50 px-4 py-2 text-xs text-slate-400">…and {bulkRows.length - 5} more</p>}
+                  </div>
+                )}
+
+                {bulkStatus === "success" && (
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <CheckCircle className="h-4 w-4 shrink-0" />
+                    <span><strong>{bulkCount}</strong> pitch{bulkCount !== 1 ? "es" : ""} imported successfully.</span>
+                  </div>
+                )}
+                {bulkStatus === "error" && (
+                  <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>Import failed — please check your CSV and try again.</span>
+                  </div>
+                )}
+
+                <button onClick={handleBulkImport}
+                  disabled={!bulkRows.length || bulkStatus === "inserting" || bulkStatus === "success"}
+                  className="flex w-fit items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40">
+                  {bulkStatus === "inserting"
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Importing…</>
+                    : <><FileUp className="h-4 w-4" /> Import Pitches</>}
+                </button>
+              </div>
+
+              {/* ── Videos list ── */}
               {videosLoading ? (
                 <div className="flex items-center justify-center py-10 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
               ) : videos.length === 0 ? (
@@ -467,7 +686,13 @@ export default function RoomDashboardPage() {
                 <div className="overflow-hidden rounded-xl border border-slate-200">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      <tr><th className="px-4 py-3 text-left">Title</th><th className="px-4 py-3 text-left">URL</th><th className="px-4 py-3 text-right">Elo</th><th className="px-4 py-3 text-center">Actions</th></tr>
+                      <tr>
+                        <th className="px-4 py-3 text-left">Title</th>
+                        <th className="px-4 py-3 text-left">URL</th>
+                        <th className="px-4 py-3 text-left">Authors</th>
+                        <th className="px-4 py-3 text-right">Elo</th>
+                        <th className="px-4 py-3 text-center">Actions</th>
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {videos.map((v) => (
@@ -477,6 +702,9 @@ export default function RoomDashboardPage() {
                             <a href={v.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 truncate text-indigo-600 hover:underline">
                               <span className="truncate">{v.url}</span><ExternalLink className="h-3 w-3 shrink-0" />
                             </a>
+                          </td>
+                          <td className="max-w-[180px] px-4 py-3 text-xs text-slate-500">
+                            {v.author_emails || <span className="italic text-slate-300">none</span>}
                           </td>
                           <td className="px-4 py-3 text-right font-mono text-slate-600">{v.elo_rating}</td>
                           <td className="px-4 py-3 text-center">
@@ -501,6 +729,7 @@ export default function RoomDashboardPage() {
                 <h2 className="text-base font-semibold text-slate-900">Generate Comparison Assignments</h2>
                 <p className="mt-1 text-sm text-slate-600">
                   Configure comparisons per student, then generate all assignments at once.
+                  Students are automatically excluded from comparing their own pitches.
                 </p>
               </div>
 
@@ -515,7 +744,7 @@ export default function RoomDashboardPage() {
                 {(studentCount ?? 0) > 0 && videos.length >= 2 && (
                   <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
                     <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>With <strong>{studentCount}</strong> students, <strong>{videos.length}</strong> videos, and <strong>{comparisonsPerStudent}</strong> comparisons each, this will create <strong>{Math.min(comparisonsPerStudent, (videos.length * (videos.length - 1)) / 2) * (studentCount ?? 0)}</strong> total assignments.</span>
+                    <span>With <strong>{studentCount}</strong> students, <strong>{videos.length}</strong> videos, and <strong>{comparisonsPerStudent}</strong> comparisons each, this will create approximately <strong>{Math.min(comparisonsPerStudent, (videos.length * (videos.length - 1)) / 2) * (studentCount ?? 0)}</strong> total assignments.</span>
                   </div>
                 )}
               </div>

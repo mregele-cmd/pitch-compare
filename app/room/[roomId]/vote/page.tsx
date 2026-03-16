@@ -8,12 +8,12 @@ import { calcNewElos } from "@/lib/elo";
 import { toEmbedUrl } from "@/lib/embedUrl";
 import {
   ThumbsUp, Loader2, CheckCircle, AlertCircle,
-  PartyPopper, BarChart2, Info, Mail,
+  PartyPopper, BarChart2, Info, Mail, Video,
 } from "lucide-react";
 
 type Screen = "email" | "loading" | "voting" | "submitting" | "done";
 
-interface VideoSlot  { id: string; title: string; url: string; elo_rating: number; }
+interface VideoSlot  { id: string; title: string; url: string; elo_rating: number; author_emails: string | null; }
 interface ActiveAssignment { id: string; video1: VideoSlot; video2: VideoSlot; }
 interface Student    { id: string; name: string; email: string; }
 
@@ -37,6 +37,7 @@ function VoteInner() {
   const [selected, setSelected]               = useState<"video1" | "video2" | null>(null);
   const [completedCount, setCompletedCount]   = useState(0);
   const [totalCount, setTotalCount]           = useState(0);
+  const [myPitch, setMyPitch]                 = useState<VideoSlot | null>(null);
   const [error, setError]                     = useState<string | null>(null);
 
   // Auto-login via magic link
@@ -64,19 +65,42 @@ function VoteInner() {
 
   async function loadStudent(s: Student) {
     setStudent(s);
-    const [{ count: total }, { count: completed }] = await Promise.all([
+    const emailLower = s.email.toLowerCase();
+
+    const [{ count: total }, { count: completed }, { data: allVideos }] = await Promise.all([
       supabase.from("assignments").select("*", { count: "exact", head: true }).eq("student_id", s.id),
       supabase.from("assignments").select("*", { count: "exact", head: true }).eq("student_id", s.id).eq("status", "completed"),
+      supabase.from("videos").select("id,title,url,elo_rating,author_emails").eq("room_id", roomId),
     ]);
     setTotalCount(total ?? 0);
     setCompletedCount(completed ?? 0);
-    await fetchNextAssignment(s.id);
+
+    // Find the student's own pitch (if they are listed as an author)
+    const own = (allVideos ?? []).find((v) => {
+      if (!v.author_emails) return false;
+      return v.author_emails
+        .split(",")
+        .map((e: string) => e.trim().toLowerCase())
+        .includes(emailLower);
+    });
+    setMyPitch((own as VideoSlot) ?? null);
+
+    await fetchNextAssignment(s.id, s.email);
   }
 
-  async function fetchNextAssignment(studentId: string): Promise<void> {
+  /** Returns true if the student is listed as an author of the given video. */
+  function isOwnVideo(v: VideoSlot, studentEmail: string): boolean {
+    if (!v.author_emails) return false;
+    return v.author_emails
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .includes(studentEmail.toLowerCase());
+  }
+
+  async function fetchNextAssignment(studentId: string, studentEmail: string): Promise<void> {
     const { data, error: fetchError } = await supabase
       .from("assignments")
-      .select(`id, video1:videos!assignments_video_1_id_fkey(id,title,url,elo_rating), video2:videos!assignments_video_2_id_fkey(id,title,url,elo_rating)`)
+      .select(`id, video1:videos!assignments_video_1_id_fkey(id,title,url,elo_rating,author_emails), video2:videos!assignments_video_2_id_fkey(id,title,url,elo_rating,author_emails)`)
       .eq("student_id", studentId)
       .eq("status", "pending")
       .limit(1)
@@ -85,11 +109,18 @@ function VoteInner() {
     if (fetchError) { setError("Could not load your next assignment. Please refresh."); return; }
     if (!data) { setScreen("done"); return; }
 
-    setAssignment({
-      id:     data.id,
-      video1: data.video1 as unknown as VideoSlot,
-      video2: data.video2 as unknown as VideoSlot,
-    });
+    const v1 = data.video1 as unknown as VideoSlot;
+    const v2 = data.video2 as unknown as VideoSlot;
+
+    // Safety check: if this assignment contains a video the student authored,
+    // auto-skip it (mark completed without a vote) and fetch the next one.
+    if (isOwnVideo(v1, studentEmail) || isOwnVideo(v2, studentEmail)) {
+      await supabase.from("assignments").update({ status: "completed" }).eq("id", data.id);
+      await fetchNextAssignment(studentId, studentEmail);
+      return;
+    }
+
+    setAssignment({ id: data.id, video1: v1, video2: v2 });
     setSelected(null);
     setScreen("voting");
   }
@@ -136,7 +167,7 @@ function VoteInner() {
     }
 
     setCompletedCount((c) => c + 1);
-    await fetchNextAssignment(student.id);
+    await fetchNextAssignment(student.id, student.email);
   }
 
   const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -180,27 +211,45 @@ function VoteInner() {
   // ── Done screen ───────────────────────────────────────────────────────────
   if (screen === "done") {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-          <PartyPopper className="h-10 w-10 text-emerald-600" />
+      <div className="flex flex-col items-center gap-8">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+            <PartyPopper className="h-10 w-10 text-emerald-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">You&apos;re all done!</h1>
+            <p className="mt-2 text-slate-600">
+              Great work, {student?.name?.split(" ")[0]}. You&apos;ve completed all{" "}
+              <strong>{totalCount}</strong> of your assigned comparisons.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Link href={`/room/${roomId}/leaderboard`}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
+              <BarChart2 className="h-4 w-4" /> View Leaderboard
+            </Link>
+            <button onClick={() => { setScreen("email"); setEmailInput(""); setStudent(null); setMyPitch(null); setError(null); }}
+              className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-600 hover:border-slate-400">
+              Switch Account
+            </button>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">You&apos;re all done!</h1>
-          <p className="mt-2 text-slate-600">
-            Great work, {student?.name?.split(" ")[0]}. You&apos;ve completed all{" "}
-            <strong>{totalCount}</strong> of your assigned comparisons.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link href={`/room/${roomId}/leaderboard`}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
-            <BarChart2 className="h-4 w-4" /> View Leaderboard
-          </Link>
-          <button onClick={() => { setScreen("email"); setEmailInput(""); setStudent(null); setError(null); }}
-            className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-600 hover:border-slate-400">
-            Switch Account
-          </button>
-        </div>
+
+        {/* My Pitch — shown on done screen */}
+        {myPitch && (
+          <div className="w-full max-w-xl rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <Video className="h-5 w-5 text-indigo-600" />
+              <h2 className="text-base font-semibold text-indigo-900">Your Pitch</h2>
+            </div>
+            <p className="mb-3 text-sm font-medium text-indigo-800">{myPitch.title}</p>
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-900">
+              <iframe key={myPitch.id} src={toEmbedUrl(myPitch.url)} title={myPitch.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen className="absolute inset-0 h-full w-full" />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -258,6 +307,23 @@ function VoteInner() {
             );
           })}
         </div>
+
+        {/* My Pitch — shown on voting screen as a reminder */}
+        {myPitch && (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <Video className="h-5 w-5 text-indigo-600" />
+              <h2 className="text-base font-semibold text-indigo-900">Your Pitch</h2>
+              <span className="ml-auto text-xs text-indigo-500">You are not judged on this one</span>
+            </div>
+            <p className="mb-3 text-sm font-medium text-indigo-800">{myPitch.title}</p>
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-900">
+              <iframe key={myPitch.id} src={toEmbedUrl(myPitch.url)} title={myPitch.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen className="absolute inset-0 h-full w-full" />
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-center">
           <button onClick={handleSubmitVote} disabled={!selected || isSubmitting}

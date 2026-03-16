@@ -4,9 +4,9 @@
  * Unknown formats are returned as-is (the professor may paste an embed URL directly).
  */
 export function toEmbedUrl(url: string): string {
-  // YouTube: youtube.com/watch?v=ID  or  youtu.be/ID
+  // YouTube: youtube.com/watch?v=ID  |  youtu.be/ID  |  youtube.com/shorts/ID
   const ytMatch = url.match(
-    /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
   );
   if (ytMatch) {
     return `https://www.youtube.com/embed/${ytMatch[1]}`;
