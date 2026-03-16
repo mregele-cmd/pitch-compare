@@ -20,6 +20,9 @@ import {
   Trash2,
   Info,
   Mail,
+  Download,
+  RotateCcw,
+  TriangleAlert,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -106,6 +109,13 @@ export default function DashboardPage() {
   const [emailStatus, setEmailStatus]   = useState<ActionStatus>("idle");
   const [emailSent, setEmailSent]       = useState<number | null>(null);
   const [emailError, setEmailError]     = useState<string | null>(null);
+
+  // ── Semester maintenance state ────────────────────────────────────────────
+  const [exportingLeaderboard, setExportingLeaderboard] = useState(false);
+  const [exportingVotes, setExportingVotes]             = useState(false);
+  const [showResetConfirm, setShowResetConfirm]         = useState(false);
+  const [resetStatus, setResetStatus]                   = useState<ActionStatus>("idle");
+  const [resetError, setResetError]                     = useState<string | null>(null);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const [studentCount, setStudentCount] = useState<number | null>(null);
@@ -350,6 +360,114 @@ export default function DashboardPage() {
     } catch (err) {
       setEmailStatus("error");
       setEmailError(err instanceof Error ? err.message : "Network error.");
+    }
+  }
+
+  // ── CSV helper ────────────────────────────────────────────────────────────
+
+  function downloadCsv(filename: string, headers: string[], rows: (string | number)[]) {
+    const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const content = [headers.map(escape).join(","), ...rows].join("\n");
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Export leaderboard ────────────────────────────────────────────────────
+
+  async function handleExportLeaderboard() {
+    setExportingLeaderboard(true);
+
+    const [{ data: vids }, { data: votes }] = await Promise.all([
+      supabase.from("videos").select("id, title, elo_rating").order("elo_rating", { ascending: false }),
+      supabase.from("votes").select("winner_video_id, loser_video_id"),
+    ]);
+
+    const winMap  = new Map<string, number>();
+    const lossMap = new Map<string, number>();
+    votes?.forEach(({ winner_video_id, loser_video_id }) => {
+      winMap.set(winner_video_id,  (winMap.get(winner_video_id)  ?? 0) + 1);
+      lossMap.set(loser_video_id,  (lossMap.get(loser_video_id)  ?? 0) + 1);
+    });
+
+    const rows = (vids ?? []).map((v, i) =>
+      [i + 1, v.title, v.elo_rating, winMap.get(v.id) ?? 0, lossMap.get(v.id) ?? 0, v.elo_rating - 1200]
+        .map(String)
+        .join(",")
+    );
+
+    downloadCsv(
+      `leaderboard_${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Rank", "Title", "Elo Rating", "Wins", "Losses", "vs Baseline"],
+      rows as unknown as (string | number)[]
+    );
+
+    setExportingLeaderboard(false);
+  }
+
+  // ── Export raw votes ──────────────────────────────────────────────────────
+
+  async function handleExportVotes() {
+    setExportingVotes(true);
+
+    const { data: votes } = await supabase
+      .from("votes")
+      .select(`
+        created_at,
+        student:students(email),
+        winner:videos!votes_winner_video_id_fkey(title),
+        loser:videos!votes_loser_video_id_fkey(title)
+      `)
+      .order("created_at", { ascending: true });
+
+    const rows = (votes ?? []).map((v) => {
+      const student = v.student as unknown as { email: string } | null;
+      const winner  = v.winner  as unknown as { title: string } | null;
+      const loser   = v.loser   as unknown as { title: string } | null;
+      return [
+        new Date(v.created_at).toLocaleString(),
+        student?.email  ?? "",
+        winner?.title   ?? "",
+        loser?.title    ?? "",
+      ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",");
+    });
+
+    downloadCsv(
+      `votes_raw_${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Timestamp", "Student Email", "Winner Title", "Loser Title"],
+      rows as unknown as (string | number)[]
+    );
+
+    setExportingVotes(false);
+  }
+
+  // ── Reset system ──────────────────────────────────────────────────────────
+
+  async function handleReset() {
+    setResetStatus("loading");
+    setResetError(null);
+
+    try {
+      const res  = await fetch("/api/reset", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        setResetStatus("error");
+        setResetError(json.error ?? "Reset failed.");
+        return;
+      }
+      setResetStatus("success");
+      setShowResetConfirm(false);
+      // Refresh counts
+      setStudentCount(0);
+      setVideos([]);
+      setAssignmentCount(0);
+    } catch (err) {
+      setResetStatus("error");
+      setResetError(err instanceof Error ? err.message : "Network error.");
     }
   }
 
@@ -886,6 +1004,112 @@ export default function DashboardPage() {
 
         </div>
       </div>
+
+      {/* ── Semester Maintenance ─────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-6 py-4">
+          <h2 className="text-base font-semibold text-slate-900">Semester Maintenance</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Export data for your records or reset the system for a new semester.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-6 p-6">
+          {/* Export row */}
+          <div>
+            <p className="mb-3 text-sm font-medium text-slate-700">Export Data</p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleExportLeaderboard}
+                disabled={exportingLeaderboard}
+                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {exportingLeaderboard
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Download className="h-4 w-4" />}
+                Export Leaderboard (CSV)
+              </button>
+
+              <button
+                onClick={handleExportVotes}
+                disabled={exportingVotes}
+                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {exportingVotes
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Download className="h-4 w-4" />}
+                Export Raw Votes (CSV)
+              </button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-slate-100" />
+
+          {/* Reset row */}
+          <div>
+            <p className="mb-1 text-sm font-medium text-slate-700">Danger Zone</p>
+            <p className="mb-3 text-xs text-slate-500">
+              Permanently deletes all students, pitches, votes, and assignments. This cannot be undone.
+            </p>
+
+            {!showResetConfirm ? (
+              <button
+                onClick={() => { setShowResetConfirm(true); setResetStatus("idle"); setResetError(null); }}
+                className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:border-red-400 hover:bg-red-50"
+              >
+                <RotateCcw className="h-4 w-4" /> Reset System
+              </button>
+            ) : (
+              <div className="flex flex-col gap-4 rounded-xl border border-red-200 bg-red-50 p-5">
+                <div className="flex items-start gap-3">
+                  <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                  <div>
+                    <p className="font-semibold text-red-800">Are you sure?</p>
+                    <p className="text-sm text-red-700">
+                      This will permanently delete <strong>all students, pitches, votes, and assignments</strong>.
+                      Export your data first if you need it.
+                    </p>
+                  </div>
+                </div>
+
+                {resetError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-red-700">
+                    <AlertCircle className="h-4 w-4 shrink-0" /> {resetError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleReset}
+                    disabled={resetStatus === "loading"}
+                    className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {resetStatus === "loading"
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Resetting…</>
+                      : <><RotateCcw className="h-4 w-4" /> Yes, delete everything</>}
+                  </button>
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    disabled={resetStatus === "loading"}
+                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetStatus === "success" && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                System reset — all data has been deleted. Ready for a new semester.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
