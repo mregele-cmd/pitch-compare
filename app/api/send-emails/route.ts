@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend is initialized lazily inside the handler so a missing key doesn't crash the build.
 
 // Use the service role key if available (bypasses RLS), otherwise fall back to anon key.
 // For this route we only need read access so the anon key is fine for now.
@@ -92,6 +92,14 @@ function buildEmailHtml(studentName: string, magicLink: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json(
+      { error: "RESEND_API_KEY is not configured. Add it to your environment variables to enable email sending." },
+      { status: 503 }
+    );
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
   // Derive the app's base URL from the incoming request (works for localhost and production)
   const baseUrl = new URL(request.url).origin;
 
