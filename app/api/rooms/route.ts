@@ -1,49 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase-server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// GET /api/rooms — return rooms filtered by the authenticated user
+export async function GET() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-type Session =
-  | { role: "admin" }
-  | { role: "owner"; email: string }
-  | null;
-
-function resolveSession(request: NextRequest): Session {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  const inviteCode    = process.env.INVITE_CODE;
-
-  const adminCookie = request.cookies.get("admin_auth");
-  const ownerCookie = request.cookies.get("owner_session");
-
-  if (adminPassword && adminCookie?.value === adminPassword) return { role: "admin" };
-  if (!adminPassword && !inviteCode) return { role: "admin" }; // local dev fallback
-
-  if (inviteCode && ownerCookie) {
-    const prefix = `${inviteCode}:`;
-    if (ownerCookie.value.startsWith(prefix)) {
-      return { role: "owner", email: ownerCookie.value.slice(prefix.length) };
-    }
-  }
-  return null;
-}
-
-// GET /api/rooms — return rooms filtered by session
-export async function GET(request: NextRequest) {
-  const session = resolveSession(request);
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const isAdmin = adminEmail && user.email === adminEmail;
+
   let query = supabase
     .from("rooms")
-    .select("id, name, access_code, creator_email, created_at")
+    .select("id, name, access_code, owner_id, created_at")
     .order("created_at", { ascending: false });
 
-  if (session.role === "owner") {
-    query = query.eq("creator_email", session.email);
+  if (!isAdmin) {
+    query = query.eq("owner_id", user.id);
   }
 
   const { data, error } = await query;
@@ -51,13 +27,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ rooms: data ?? [], session });
+  const role = isAdmin ? "admin" : "professor";
+  return NextResponse.json({ rooms: data ?? [], session: { role, email: user.email, id: user.id } });
 }
 
-// POST /api/rooms — create a room, setting creator_email from session
+// POST /api/rooms — create a room owned by the authenticated user
 export async function POST(request: NextRequest) {
-  const session = resolveSession(request);
-  if (!session) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -69,12 +48,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "name and access_code are required." }, { status: 400 });
   }
 
-  const payload: Record<string, string> = { name, access_code };
-  if (session.role === "owner") {
-    payload.creator_email = session.email;
-  }
+  const { data, error } = await supabase
+    .from("rooms")
+    .insert({ name, access_code, owner_id: user.id })
+    .select()
+    .single();
 
-  const { data, error } = await supabase.from("rooms").insert(payload).select().single();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

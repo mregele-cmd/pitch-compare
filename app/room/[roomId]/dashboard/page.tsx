@@ -130,14 +130,14 @@ export default function RoomDashboardPage() {
   async function fetchRoom() {
     // Fetch room and check ownership for non-admin users
     const [{ data }, sessionRes] = await Promise.all([
-      supabase.from("rooms").select("name,creator_email").eq("id", roomId).maybeSingle(),
+      supabase.from("rooms").select("name,owner_id").eq("id", roomId).maybeSingle(),
       fetch("/api/admin/me"),
     ]);
     if (!data) { setRoomNotFound(true); return; }
 
-    const session = await sessionRes.json() as { role: string; email?: string };
-    // Owners may only access rooms they created
-    if (session.role === "owner" && data.creator_email !== session.email) {
+    const session = await sessionRes.json() as { role: string; id?: string };
+    // Professors may only access rooms they own
+    if (session.role !== "admin" && data.owner_id !== session.id) {
       setAccessDenied(true);
       return;
     }

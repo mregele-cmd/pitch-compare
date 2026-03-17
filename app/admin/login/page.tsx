@@ -3,35 +3,35 @@
 import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Video, Lock, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Video, Mail, Lock, Loader2, AlertCircle, ArrowLeft, UserPlus } from "lucide-react";
+import { createClient } from "@/lib/supabase-browser";
 
 function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const from         = searchParams.get("from") ?? "/rooms";
+  const from         = searchParams.get("from") ?? "/admin/dashboard";
 
+  const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/admin/login", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ password }),
-    });
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (!res.ok) {
-      setError("Incorrect password. Please try again.");
+    if (authError) {
+      setError("Invalid email or password. Please try again.");
       setLoading(false);
       return;
     }
 
     router.push(from);
+    router.refresh();
   }
 
   return (
@@ -41,21 +41,33 @@ function LoginForm() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg">
           <Video className="h-8 w-8 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">Professor / Admin Login</h1>
-        <p className="mt-2 text-slate-500">Enter your admin password to manage Pitch Rooms.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Professor Portal</h1>
+        <p className="mt-2 text-slate-500">Sign in to manage your Pitch Rooms.</p>
       </div>
 
       {/* Login form */}
       <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
         <div className="relative">
+          <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="email"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoFocus
+            className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-4 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div className="relative">
           <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="password"
-            placeholder="Admin password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoFocus
             className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-4 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
@@ -77,9 +89,17 @@ function LoginForm() {
         </button>
       </form>
 
-      <Link href="/" className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700">
-        <ArrowLeft className="h-4 w-4" /> Back to homepage
-      </Link>
+      <div className="flex flex-col items-center gap-3">
+        <Link
+          href="/admin/signup"
+          className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800"
+        >
+          <UserPlus className="h-4 w-4" /> Create a professor account
+        </Link>
+        <Link href="/" className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700">
+          <ArrowLeft className="h-4 w-4" /> Back to homepage
+        </Link>
+      </div>
     </div>
   );
 }

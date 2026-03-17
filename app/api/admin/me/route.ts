@@ -1,33 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase-server";
 
-export type SessionInfo =
-  | { role: "admin" }
-  | { role: "owner"; email: string }
-  | { role: null };
+export async function GET() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-export async function GET(request: NextRequest) {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  const inviteCode    = process.env.INVITE_CODE;
-
-  const adminCookie = request.cookies.get("admin_auth");
-  const ownerCookie = request.cookies.get("owner_session");
-
-  if (adminPassword && adminCookie?.value === adminPassword) {
-    return NextResponse.json({ role: "admin" } satisfies SessionInfo);
+  if (!user) {
+    return NextResponse.json({ role: null }, { status: 401 });
   }
 
-  if (inviteCode && ownerCookie) {
-    const prefix = `${inviteCode}:`;
-    if (ownerCookie.value.startsWith(prefix)) {
-      const email = ownerCookie.value.slice(prefix.length);
-      return NextResponse.json({ role: "owner", email } satisfies SessionInfo);
-    }
-  }
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const role = adminEmail && user.email === adminEmail ? "admin" : "professor";
 
-  // No password configured (local dev) — grant admin access
-  if (!adminPassword && !inviteCode) {
-    return NextResponse.json({ role: "admin" } satisfies SessionInfo);
-  }
-
-  return NextResponse.json({ role: null } satisfies SessionInfo, { status: 401 });
+  return NextResponse.json({ role, email: user.email, id: user.id });
 }

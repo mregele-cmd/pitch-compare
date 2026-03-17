@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Hash, Loader2, AlertCircle, Video, ArrowRight, Users, PlusCircle } from "lucide-react";
+import { Hash, Loader2, AlertCircle, Video, ArrowRight } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
@@ -47,7 +47,7 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Gatekeeper */}
+      {/* Join form */}
       <div className="w-full max-w-sm">
         <form onSubmit={handleJoin} className="flex flex-col gap-4">
           <div className="relative">
@@ -77,31 +77,18 @@ export default function HomePage() {
           >
             {loading
               ? <><Loader2 className="h-4 w-4 animate-spin" /> Finding room…</>
-              : <>Enter Pitch Room <ArrowRight className="h-4 w-4" /></>}
+              : <>Join Pitch Room <ArrowRight className="h-4 w-4" /></>}
           </button>
         </form>
-
-        <div className="mt-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs text-slate-400">or</span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/create"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 py-3 text-sm font-medium text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100"
-          >
-            <PlusCircle className="h-4 w-4" /> Create a Pitch Room
-          </Link>
-          <Link
-            href="/admin/login"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 py-3 text-sm font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
-          >
-            <Users className="h-4 w-4" /> Professor / Admin Login
-          </Link>
-        </div>
       </div>
+
+      {/* Professor portal link — subtle footer link */}
+      <Link
+        href="/admin/login"
+        className="text-xs text-slate-400 hover:text-slate-600"
+      >
+        Professor Portal
+      </Link>
     </div>
   );
 }

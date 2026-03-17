@@ -1,32 +1,46 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
-export function proxy(request: NextRequest) {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  const inviteCode    = process.env.INVITE_CODE;
+export async function proxy(request: NextRequest) {
+  // Build a response that can carry refreshed auth cookies forward.
+  let response = NextResponse.next({ request });
 
-  // If neither credential is configured (local dev without .env.local), allow through.
-  if (!adminPassword && !inviteCode) {
-    return NextResponse.next();
-  }
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          // Mirror cookie updates onto both the request and the response.
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
 
-  const adminCookie = request.cookies.get("admin_auth");
-  const ownerCookie = request.cookies.get("owner_session");
+  // getUser() validates the JWT and refreshes the session if needed.
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const isAdmin = !!adminPassword && adminCookie?.value === adminPassword;
-  const isOwner = !!inviteCode && !!ownerCookie &&
-    ownerCookie.value.startsWith(`${inviteCode}:`);
-
-  if (!isAdmin && !isOwner) {
+  if (!user) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("from", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  // Protect the rooms list and individual room dashboards.
+  // Protect the professor dashboard and individual room dashboards.
   // Vote and leaderboard are intentionally public (student-facing).
-  matcher: ["/rooms", "/room/:roomId/dashboard"],
+  matcher: ["/admin/dashboard", "/room/:roomId/dashboard"],
 };
