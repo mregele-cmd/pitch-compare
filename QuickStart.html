@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PitchCompare Quick Start Guide</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 20px; }
+        h1 { color: #4F46E5; border-bottom: 2px solid #4F46E5; padding-bottom: 10px; }
+        h2 { color: #1F2937; margin-top: 30px; border-left: 5px solid #4F46E5; padding-left: 15px; }
+        .step { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e7eb; }
+        .step-number { font-weight: bold; color: #4F46E5; font-size: 1.2em; margin-right: 10px; }
+        code { background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border: 1px solid #e5e7eb; }
+        th { background: #f3f4f6; }
+        .pro-tip { background: #ecfdf5; border-left: 5px solid #10b981; padding: 15px; margin: 20px 0; font-style: italic; }
+        .copyright { text-align: center; color: #6b7280; font-size: 0.85em; margin-top: 50px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 PitchCompare: Quick Start Guide</h1>
+    <p>Follow these five steps to set up your own pairwise pitch evaluation session.</p>
+
+    <div class="step">
+        <span class="step-number">01</span> <strong>Create Your Account</strong>
+        <p>Go to the Professor Portal and click <strong>Sign Up</strong>. Enter your email and use the Invite Code: <code>JOIN-PITCH</code>. This grants you access to create and manage your own private Pitch Rooms.</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">02</span> <strong>Initialize a Pitch Room</strong>
+        <p>In your dashboard, click <strong>+ New Pitch Room</strong>. Give it a recognizable name and a unique 6-character <strong>Room Code</strong> (e.g., <code>DEMO12</code>). This is the code you will share with your participants.</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">03</span> <strong>Upload Your Data</strong>
+        <p>Download the CSV templates from the "About" page. You will need to upload two files:</p>
+        <ul>
+            <li><strong>students.csv:</strong> Columns: <code>email</code>, <code>name</code>. (Only these users can vote).</li>
+            <li><strong>pitches.csv:</strong> Columns: <code>title</code>, <code>url</code>, <code>author_emails</code>. (Prevents authors from voting for their own work).</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <span class="step-number">04</span> <strong>Launch the Session</strong>
+        <p>Share the URL and your <strong>Room Code</strong> with your group. We recommend asking each participant to complete <strong>10&ndash;15 comparisons</strong> for optimal leaderboard stability.</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">05</span> <strong>Export Results</strong>
+        <p>Monitor progress in real-time. Once voting is complete, click <strong>Export Results</strong> to download a final CSV of the rankings and Elo scores.</p>
+    </div>
+
+    <div class="pro-tip">
+        <strong>The Logic:</strong> This system uses the <strong>Elo Rating System</strong> to capture collective intuition. It eliminates the "subjectivity trap" of traditional rubrics by focusing on simple, head-to-head comparisons.
+    </div>
+
+    <div class="copyright">
+        &copy; 2026 Matthew D. Regele. All rights reserved. <br>
+        PitchCompare is the intellectual property of Matthew D. Regele. Academic use is permitted with attribution.
+    </div>
+
+</body>
+</html>

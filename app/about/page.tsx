@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Users, Brain, BarChart2, GraduationCap, BookOpen,
   Hash, Video, CheckCircle2, Upload, Shuffle, ArrowRight,
-  FileText, AlertTriangle, MonitorPlay, Download, FileDown,
+  FileText, AlertTriangle, MonitorPlay, Download, FileDown, Scale,
 } from "lucide-react";
 import VoteDemo from "@/components/VoteDemo";
 
@@ -132,6 +132,7 @@ export default function AboutPage() {
             ["#student-guide","Student Guide"],
             ["#prof-guide",   "Professor Guide"],
             ["#live-demo",    "Live Demo"],
+            ["#copyright",    "License"],
           ].map(([href, label]) => (
             <a
               key={href}
@@ -506,6 +507,40 @@ export default function AboutPage() {
           </Link>
           <p className="mt-3 text-xs text-slate-400">
             Requires an invite code from your institution.
+          </p>
+        </div>
+      </Section>
+
+      {/* ── Copyright & Attribution ──────────────────────────────────────── */}
+      <Section id="copyright">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+            <Scale className="h-5 w-5 text-slate-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Copyright &amp; Attribution</h2>
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 leading-relaxed shadow-sm">
+          <p>
+            <strong className="text-slate-900">PitchCompare</strong> — including its source
+            code, design, pedagogical framework, and documentation — is the original work of{" "}
+            <strong className="text-slate-900">Matthew D. Regele</strong>.
+          </p>
+          <p>
+            &copy; 2026 Matthew D. Regele. All rights reserved.
+          </p>
+          <p>
+            Permission is granted for <strong className="text-slate-900">non-commercial academic use</strong>{" "}
+            with proper attribution. Any course, publication, or presentation that references or
+            builds upon this tool must credit the author as follows:
+          </p>
+          <blockquote className="rounded-xl border-l-4 border-indigo-400 bg-indigo-50 px-5 py-4 font-mono text-xs text-indigo-900">
+            Regele, M. D. (2026). <em>PitchCompare: Pairwise Elo evaluation for student pitches</em>.
+            Retrieved from pitchcompare.app
+          </blockquote>
+          <p>
+            Commercial use, redistribution, or creation of derivative works requires express
+            written permission from the author. For inquiries, contact the author directly.
           </p>
         </div>
       </Section>
