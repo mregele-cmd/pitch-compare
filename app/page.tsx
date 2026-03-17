@@ -88,7 +88,7 @@ export default function HomePage() {
         </div>
 
         <Link
-          href="/rooms"
+          href="/admin/login"
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 py-3 text-sm font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50"
         >
           <Users className="h-4 w-4" /> Professor / Admin Login
