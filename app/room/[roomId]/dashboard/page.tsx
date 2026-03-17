@@ -75,9 +75,10 @@ function normalizeAuthorEmails(raw: string): string {
 export default function RoomDashboardPage() {
   const { roomId } = useParams<{ roomId: string }>();
 
-  // Room meta
+  // Session + room meta
   const [roomName, setRoomName]         = useState<string>("");
   const [roomNotFound, setRoomNotFound] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Roster upload state
   const [activeTab, setActiveTab]         = useState("upload");
@@ -127,8 +128,20 @@ export default function RoomDashboardPage() {
   // ── Fetch helpers ──────────────────────────────────────────────────────────
 
   async function fetchRoom() {
-    const { data } = await supabase.from("rooms").select("name").eq("id", roomId).maybeSingle();
+    // Fetch room and check ownership for non-admin users
+    const [{ data }, sessionRes] = await Promise.all([
+      supabase.from("rooms").select("name,creator_email").eq("id", roomId).maybeSingle(),
+      fetch("/api/admin/me"),
+    ]);
     if (!data) { setRoomNotFound(true); return; }
+
+    const session = await sessionRes.json() as { role: string; email?: string };
+    // Owners may only access rooms they created
+    if (session.role === "owner" && data.creator_email !== session.email) {
+      setAccessDenied(true);
+      return;
+    }
+
     setRoomName(data.name);
   }
 
@@ -423,6 +436,15 @@ export default function RoomDashboardPage() {
       <AlertCircle className="h-10 w-10 text-red-400" />
       <p className="font-semibold">Room not found.</p>
       <a href="/rooms" className="text-sm text-indigo-600 underline">← Back to All Rooms</a>
+    </div>
+  );
+
+  if (accessDenied) return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-500">
+      <AlertCircle className="h-10 w-10 text-amber-400" />
+      <p className="font-semibold">Access Denied</p>
+      <p className="text-sm text-slate-400">This Pitch Room belongs to a different account.</p>
+      <a href="/rooms" className="text-sm text-indigo-600 underline">← Back to Your Rooms</a>
     </div>
   );
 

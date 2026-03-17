@@ -4,28 +4,25 @@ import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import {
-  Plus,
-  LayoutDashboard,
-  Loader2,
-  AlertCircle,
-  Lock,
-  Calendar,
-  X,
-  RefreshCw,
-  Copy,
-  Check,
+  Plus, LayoutDashboard, Loader2, AlertCircle,
+  Lock, Calendar, X, RefreshCw, Copy, Check, User,
 } from "lucide-react";
 
 interface Room {
   id: string;
   name: string;
   access_code: string | null;
+  creator_email: string | null;
   created_at: string;
 }
 
-/** Generate a random 6-character uppercase alphanumeric code. */
+type Session =
+  | { role: "admin" }
+  | { role: "owner"; email: string }
+  | null;
+
+/** Generate a random 6-character uppercase alphanumeric code (no confusable chars). */
 function generateCode(): string {
-  // Omit visually confusable characters (0/O, 1/I/L)
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 6 }, () =>
     chars[Math.floor(Math.random() * chars.length)]
@@ -33,8 +30,10 @@ function generateCode(): string {
 }
 
 export default function RoomsPage() {
+  const [session, setSession]         = useState<Session>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [rooms, setRooms]             = useState<Room[]>([]);
-  const [loading, setLoading]         = useState(true);
+  const [roomsLoading, setRoomsLoading] = useState(true);
   const [showForm, setShowForm]       = useState(false);
   const [newName, setNewName]         = useState("");
   const [newCode, setNewCode]         = useState("");
@@ -42,16 +41,37 @@ export default function RoomsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [copiedId, setCopiedId]       = useState<string | null>(null);
 
-  async function fetchRooms() {
-    const { data } = await supabase
+  // ── Load session then rooms ──────────────────────────────────────────────
+
+  useEffect(() => {
+    async function init() {
+      const res  = await fetch("/api/admin/me");
+      const data = await res.json() as Session;
+      setSession(data);
+      setSessionLoading(false);
+      await fetchRooms(data);
+    }
+    init();
+  }, []);
+
+  async function fetchRooms(sess: Session) {
+    setRoomsLoading(true);
+    let query = supabase
       .from("rooms")
-      .select("id, name, access_code, created_at")
+      .select("id, name, access_code, creator_email, created_at")
       .order("created_at", { ascending: false });
+
+    // Owners only see their own rooms
+    if (sess?.role === "owner") {
+      query = query.eq("creator_email", sess.email);
+    }
+
+    const { data } = await query;
     setRooms(data ?? []);
-    setLoading(false);
+    setRoomsLoading(false);
   }
 
-  useEffect(() => { fetchRooms(); }, []);
+  // ── Create form ───────────────────────────────────────────────────────────
 
   function openForm() {
     setNewName("");
@@ -72,11 +92,17 @@ export default function RoomsPage() {
     setCreating(true);
     setCreateError(null);
 
-    const { error } = await supabase.from("rooms").insert({
+    const payload: Record<string, string> = {
       name:        newName.trim(),
       access_code: newCode.trim().toUpperCase(),
-    });
+    };
 
+    // Owners automatically own the room they create
+    if (session?.role === "owner") {
+      payload.creator_email = session.email;
+    }
+
+    const { error } = await supabase.from("rooms").insert(payload);
     if (error) {
       setCreateError(
         error.message.includes("unique")
@@ -89,7 +115,7 @@ export default function RoomsPage() {
 
     closeForm();
     setCreating(false);
-    fetchRooms();
+    fetchRooms(session);
   }
 
   function copyCode(id: string, code: string) {
@@ -99,6 +125,20 @@ export default function RoomsPage() {
     });
   }
 
+  // ── Loading state ─────────────────────────────────────────────────────────
+
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center text-slate-400">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const isAdmin = session?.role === "admin";
+
   return (
     <div className="flex flex-col gap-8">
       {/* Header */}
@@ -106,7 +146,9 @@ export default function RoomsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Pitch Rooms</h1>
           <p className="mt-1 text-slate-600">
-            Each Pitch Room is a self-contained grading session for one class or semester.
+            {isAdmin
+              ? "All Pitch Rooms across every user."
+              : `Showing Pitch Rooms for ${(session as { role: "owner"; email: string }).email}.`}
           </p>
         </div>
         <button
@@ -167,6 +209,14 @@ export default function RoomsPage() {
             </div>
           </div>
 
+          {/* Show who will own this room */}
+          {session?.role === "owner" && (
+            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              <User className="h-3.5 w-3.5 shrink-0" />
+              This room will be registered to <strong>{session.email}</strong>.
+            </div>
+          )}
+
           {createError && (
             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0" /> {createError}
@@ -188,7 +238,7 @@ export default function RoomsPage() {
       )}
 
       {/* Room list */}
-      {loading ? (
+      {roomsLoading ? (
         <div className="flex items-center justify-center py-16 text-slate-400">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
@@ -239,18 +289,27 @@ export default function RoomsPage() {
                 )}
               </div>
 
-              {/* Created date + dashboard link */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Created {new Date(room.created_at).toLocaleDateString()}
+              {/* Owner + date */}
+              <div className="flex flex-col gap-1">
+                {/* Admins see who created the room */}
+                {isAdmin && room.creator_email && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <User className="h-3.5 w-3.5" />
+                    {room.creator_email}
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Created {new Date(room.created_at).toLocaleDateString()}
+                  </div>
+                  <Link
+                    href={`/room/${room.id}/dashboard`}
+                    className="text-xs font-medium text-indigo-600 hover:underline"
+                  >
+                    Open Dashboard →
+                  </Link>
                 </div>
-                <Link
-                  href={`/room/${room.id}/dashboard`}
-                  className="text-xs font-medium text-indigo-600 hover:underline"
-                >
-                  Open Dashboard →
-                </Link>
               </div>
             </div>
           ))}
