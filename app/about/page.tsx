@@ -5,8 +5,9 @@ import Link from "next/link";
 import {
   Users, Brain, BarChart2, GraduationCap, BookOpen,
   Hash, Video, CheckCircle2, Upload, Shuffle, ArrowRight,
-  FileText, AlertTriangle,
+  FileText, AlertTriangle, MonitorPlay,
 } from "lucide-react";
+import VoteDemo from "@/components/VoteDemo";
 
 export const metadata: Metadata = {
   title: "About & Help · PitchCompare",
@@ -130,6 +131,7 @@ export default function AboutPage() {
             ["#the-math",     "The Math"],
             ["#student-guide","Student Guide"],
             ["#prof-guide",   "Professor Guide"],
+            ["#live-demo",    "Live Demo"],
           ].map(([href, label]) => (
             <a
               key={href}
@@ -439,6 +441,41 @@ export default function AboutPage() {
             <li>Re-generate assignments if you add pitches after the initial upload.</li>
             <li>Use <strong>Reset Room</strong> to clear all data and start fresh without deleting the room.</li>
           </ul>
+        </div>
+      </Section>
+
+      {/* ── Live Demo ─────────────────────────────────────────────────────── */}
+      <Section id="live-demo" className="pb-2">
+        {/* Section header */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600">
+            <MonitorPlay className="h-6 w-6 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Experience the Student View
+          </h2>
+          <p className="mx-auto mt-2 max-w-lg text-slate-500">
+            This is the exact interface your students will see. Pick the stronger pitch
+            and click Submit — no data is saved.
+          </p>
+        </div>
+
+        {/* Demo container — same outer chrome the real voting page lives in */}
+        <div className="rounded-3xl border border-indigo-200 bg-white p-6 shadow-md sm:p-8">
+          <VoteDemo />
+        </div>
+
+        {/* CTA directly below the demo */}
+        <div className="mt-8 text-center">
+          <Link
+            href="/admin/signup"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-8 py-3.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-700"
+          >
+            Launch your first Pitch Room →
+          </Link>
+          <p className="mt-3 text-xs text-slate-400">
+            Requires an invite code from your institution.
+          </p>
         </div>
       </Section>
 
