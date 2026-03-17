@@ -6,6 +6,7 @@ import {
   Users, Brain, BarChart2, GraduationCap, BookOpen,
   Hash, Video, CheckCircle2, Upload, Shuffle, ArrowRight,
   FileText, AlertTriangle, MonitorPlay, Download, FileDown, Scale,
+  Youtube, Eye, Baby, Link2, FlaskConical,
 } from "lucide-react";
 import VoteDemo from "@/components/VoteDemo";
 
@@ -132,6 +133,7 @@ export default function AboutPage() {
             ["#student-guide","Student Guide"],
             ["#prof-guide",   "Professor Guide"],
             ["#live-demo",    "Live Demo"],
+            ["#video-hosting","Video Guide"],
             ["#copyright",    "License"],
           ].map(([href, label]) => (
             <a
@@ -508,6 +510,153 @@ export default function AboutPage() {
           <p className="mt-3 text-xs text-slate-400">
             Requires an invite code from your institution.
           </p>
+        </div>
+      </Section>
+
+      {/* ── Video Hosting Guide ──────────────────────────────────────────── */}
+      <Section id="video-hosting">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 px-6 py-8 sm:px-8">
+          {/* Header */}
+          <div className="mb-8 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+              <Youtube className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Video Hosting Guide</h2>
+              <p className="text-sm text-slate-500">How to upload and share your pitch so it embeds correctly.</p>
+            </div>
+          </div>
+
+          {/* Student steps */}
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-slate-400">
+            For Students — Uploading Your Pitch
+          </h3>
+          <div className="mb-8 space-y-4">
+
+            {/* Step 1 */}
+            <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                1
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">Upload to YouTube</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Sign in to{" "}
+                  <span className="font-medium text-slate-800">youtube.com</span>, click the
+                  camera icon (＋ Create) in the top right, and select{" "}
+                  <strong>Upload video</strong>. Add your title and description, then proceed
+                  to the Visibility step before publishing.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 — Visibility */}
+            <div className="flex gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-sm font-bold text-white">
+                2
+              </div>
+              <div className="w-full">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-amber-700" />
+                  <p className="font-semibold text-amber-900">Set Visibility to <em>Unlisted</em> — this is crucial</p>
+                </div>
+                <p className="mt-1 text-sm text-amber-800">
+                  In the <strong>Visibility</strong> step choose <strong>Unlisted</strong>.
+                  This means anyone with the link can watch, but the video won&apos;t appear
+                  in search results or on your channel.
+                </p>
+                <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+                  <div className="flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 p-2.5 text-red-700">
+                    <span className="mt-0.5 shrink-0 text-base leading-none">✗</span>
+                    <div>
+                      <p className="font-semibold">Private</p>
+                      <p>Will not embed — only you can see it.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-emerald-700">
+                    <span className="mt-0.5 shrink-0 text-base leading-none">✓</span>
+                    <div>
+                      <p className="font-semibold">Unlisted</p>
+                      <p>Embeds correctly. Viewable only via link.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 text-slate-600">
+                    <span className="mt-0.5 shrink-0 text-base leading-none">~</span>
+                    <div>
+                      <p className="font-semibold">Public</p>
+                      <p>Works, but unnecessary for a class submission.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 — Made for Kids */}
+            <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                3
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <Baby className="h-4 w-4 text-slate-500" />
+                  <p className="font-semibold text-slate-900">
+                    Select <em>&ldquo;No, it&apos;s not made for kids&rdquo;</em>
+                  </p>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  YouTube asks whether your video is made for children. Always select{" "}
+                  <strong>No, it&apos;s not made for kids</strong>. Videos marked as
+                  children&apos;s content have embedding and autoplay disabled by YouTube,
+                  which will prevent the video from loading inside PitchCompare.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4 — Copy link */}
+            <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                4
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-slate-500" />
+                  <p className="font-semibold text-slate-900">Copy the Share link and send it to your professor</p>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Once the video finishes processing, click the <strong>Share</strong> button
+                  under the video. Copy the short link — it will look like:
+                </p>
+                <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-indigo-700">
+                  https://youtu.be/xXxXxXxXxXx
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Any YouTube link format works — short links, full watch links, and Shorts
+                  links are all accepted by PitchCompare.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Professor tips */}
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-slate-400">
+            For Professors — Verifying Links
+          </h3>
+          <div className="flex gap-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+              <FlaskConical className="h-4 w-4 text-indigo-700" />
+            </div>
+            <div>
+              <p className="font-semibold text-indigo-900">The Incognito Test</p>
+              <p className="mt-1 text-sm text-indigo-800">
+                Before uploading a student&apos;s link to PitchCompare, paste it into a{" "}
+                <strong>Private / Incognito browser tab</strong>. Because Incognito has no
+                stored login or cookies, it replicates the exact conditions under which
+                the embedded player runs. If the video plays there, it will embed correctly
+                in PitchCompare. If YouTube shows a login prompt or an error, the student
+                needs to re-check their visibility setting.
+              </p>
+            </div>
+          </div>
         </div>
       </Section>
 
