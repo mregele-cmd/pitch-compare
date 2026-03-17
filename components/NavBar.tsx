@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart2, LayoutDashboard, Video, ArrowLeft, LogOut } from "lucide-react";
+import { BarChart2, LayoutDashboard, Video, ArrowLeft, LogOut, BookOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-browser";
 
@@ -116,8 +116,21 @@ export default function NavBar() {
           </Link>
 
           <div className="flex items-center gap-1">
+            <Link
+              href="/about"
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                pathname === "/about"
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Help</span>
+            </Link>
+
             {pathname === "/admin/dashboard" && (
               <>
+                <div className="mx-1 h-5 w-px bg-slate-200" />
                 <Link
                   href="/admin/dashboard"
                   className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700"
@@ -142,7 +155,7 @@ export default function NavBar() {
     );
   }
 
-  // ── Minimal public nav (homepage, vote, leaderboard) ─────────────────────
+  // ── Minimal public nav (homepage, vote, leaderboard, about) ─────────────
   return (
     <nav className="border-b border-slate-200 bg-white shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
@@ -153,6 +166,18 @@ export default function NavBar() {
           <span className="text-lg font-semibold text-slate-900">
             Pitch<span className="text-indigo-600">Compare</span>
           </span>
+        </Link>
+
+        <Link
+          href="/about"
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            pathname === "/about"
+              ? "bg-indigo-50 text-indigo-700"
+              : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          }`}
+        >
+          <BookOpen className="h-4 w-4" />
+          <span className="hidden sm:inline">Help &amp; About</span>
         </Link>
       </div>
     </nav>
