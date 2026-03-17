@@ -2,7 +2,6 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import {
   Plus, LayoutDashboard, Loader2, AlertCircle,
   Lock, Calendar, X, RefreshCw, Copy, Check, User,
@@ -41,34 +40,24 @@ export default function RoomsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [copiedId, setCopiedId]       = useState<string | null>(null);
 
-  // ── Load session then rooms ──────────────────────────────────────────────
+  // ── Load session + rooms via server-side API ─────────────────────────────
 
   useEffect(() => {
-    async function init() {
-      const res  = await fetch("/api/admin/me");
-      const data = await res.json() as Session;
-      setSession(data);
-      setSessionLoading(false);
-      await fetchRooms(data);
-    }
-    init();
+    fetchRooms();
   }, []);
 
-  async function fetchRooms(sess: Session) {
+  async function fetchRooms() {
     setRoomsLoading(true);
-    let query = supabase
-      .from("rooms")
-      .select("id, name, access_code, creator_email, created_at")
-      .order("created_at", { ascending: false });
-
-    // Owners only see their own rooms
-    if (sess?.role === "owner") {
-      query = query.eq("creator_email", sess.email);
+    const res = await fetch("/api/rooms");
+    if (!res.ok) {
+      setRoomsLoading(false);
+      return;
     }
-
-    const { data } = await query;
-    setRooms(data ?? []);
+    const data = await res.json() as { rooms: Room[]; session: Session };
+    setSession(data.session);
+    setRooms(data.rooms);
     setRoomsLoading(false);
+    setSessionLoading(false);
   }
 
   // ── Create form ───────────────────────────────────────────────────────────
@@ -92,22 +81,21 @@ export default function RoomsPage() {
     setCreating(true);
     setCreateError(null);
 
-    const payload: Record<string, string> = {
-      name:        newName.trim(),
-      access_code: newCode.trim().toUpperCase(),
-    };
+    const res = await fetch("/api/rooms", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        name:        newName.trim(),
+        access_code: newCode.trim().toUpperCase(),
+      }),
+    });
 
-    // Owners automatically own the room they create
-    if (session?.role === "owner") {
-      payload.creator_email = session.email;
-    }
-
-    const { error } = await supabase.from("rooms").insert(payload);
-    if (error) {
+    if (!res.ok) {
+      const data = await res.json() as { error?: string };
       setCreateError(
-        error.message.includes("unique")
+        (data.error ?? "").includes("unique")
           ? "That access code is already in use. Please choose a different one."
-          : error.message
+          : (data.error ?? "Failed to create room.")
       );
       setCreating(false);
       return;
@@ -115,7 +103,7 @@ export default function RoomsPage() {
 
     closeForm();
     setCreating(false);
-    fetchRooms(session);
+    fetchRooms();
   }
 
   function copyCode(id: string, code: string) {
