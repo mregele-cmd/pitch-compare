@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Users, Brain, BarChart2, GraduationCap, BookOpen,
   Hash, Video, CheckCircle2, Upload, Shuffle, ArrowRight,
-  FileText, AlertTriangle, MonitorPlay,
+  FileText, AlertTriangle, MonitorPlay, Download, FileDown,
 } from "lucide-react";
 import VoteDemo from "@/components/VoteDemo";
 
@@ -432,11 +432,42 @@ export default function AboutPage() {
           </div>
         </div>
 
+        {/* Download templates */}
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+          <div className="mb-1 flex items-center gap-2">
+            <Download className="h-5 w-5 text-emerald-700" />
+            <h3 className="text-base font-semibold text-emerald-900">Download Templates</h3>
+          </div>
+          <p className="mb-4 text-sm text-emerald-800">
+            Open these in Excel or Google Sheets, add your data, and save as a{" "}
+            <code className="rounded bg-emerald-100 px-1 font-mono text-xs">.csv</code>{" "}
+            file before uploading to your Room Dashboard.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="/templates/students_template.csv"
+              download="students_template.csv"
+              className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+            >
+              <FileDown className="h-4 w-4" />
+              Download Students Template
+            </a>
+            <a
+              href="/templates/pitches_template.csv"
+              download="pitches_template.csv"
+              className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+            >
+              <FileDown className="h-4 w-4" />
+              Download Pitches Template
+            </a>
+          </div>
+        </div>
+
         {/* Tips */}
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
           <strong className="block mb-1">Tips</strong>
           <ul className="list-disc list-inside space-y-1">
-            <li>Download the CSV templates from the room Dashboard — they include the correct column headers.</li>
+            <li>The templates above include the exact column headers required by the system.</li>
             <li>Set <strong>Comparisons per student</strong> to 5–8 for classes of 20–40 students.</li>
             <li>Re-generate assignments if you add pitches after the initial upload.</li>
             <li>Use <strong>Reset Room</strong> to clear all data and start fresh without deleting the room.</li>
