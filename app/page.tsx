@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Hash, Loader2, AlertCircle, Video, ArrowRight } from "lucide-react";
 
@@ -82,13 +81,6 @@ export default function HomePage() {
         </form>
       </div>
 
-      {/* Professor portal link — subtle footer link */}
-      <Link
-        href="/admin/login"
-        className="text-xs text-slate-400 hover:text-slate-600"
-      >
-        Professor Portal
-      </Link>
     </div>
   );
 }
