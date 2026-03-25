@@ -13,7 +13,7 @@ interface Room {
   name: string;
   access_code: string | null;
   owner_id: string | null;
-  owner_email: string | null;
+  creator_email: string | null;
   created_at: string;
 }
 
@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
 
   // Unique sorted list of emails present in the rooms data (for the dropdown)
   const creatorEmails = Array.from(
-    new Set(rooms.map((r) => r.owner_email).filter(Boolean) as string[])
+    new Set(rooms.map((r) => r.creator_email).filter(Boolean) as string[])
   ).sort();
 
   // Derive the visible rows: creator filter → name search
@@ -108,9 +108,9 @@ export default function AdminDashboardPage() {
 
     let base = rooms;
     if (creatorFilter === "mine") {
-      base = rooms.filter((r) => r.owner_email === session?.email);
+      base = rooms.filter((r) => r.creator_email === session?.email);
     } else if (creatorFilter !== "all") {
-      base = rooms.filter((r) => r.owner_email === creatorFilter);
+      base = rooms.filter((r) => r.creator_email === creatorFilter);
     }
 
     const q = nameSearch.trim().toLowerCase();
@@ -342,9 +342,9 @@ export default function AdminDashboardPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      {room.owner_email ? (
+                      {room.creator_email ? (
                         <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                          {room.owner_email}
+                          {room.creator_email}
                         </span>
                       ) : (
                         <span className="text-slate-300 italic text-xs">unknown</span>

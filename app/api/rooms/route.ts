@@ -15,7 +15,7 @@ export async function GET() {
 
   let query = supabase
     .from("rooms")
-    .select("id, name, access_code, owner_id, owner_email, created_at")
+    .select("id, name, access_code, owner_id, creator_email, created_at")
     .order("created_at", { ascending: false });
 
   if (!isAdmin) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("rooms")
-    .insert({ name, access_code, owner_id: user.id, owner_email: user.email })
+    .insert({ name, access_code, owner_id: user.id, creator_email: user.email })
     .select()
     .single();
 
