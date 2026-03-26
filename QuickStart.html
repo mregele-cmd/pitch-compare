@@ -1,66 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PitchCompare Quick Start Guide</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 20px; }
-        h1 { color: #4F46E5; border-bottom: 2px solid #4F46E5; padding-bottom: 10px; }
-        h2 { color: #1F2937; margin-top: 30px; border-left: 5px solid #4F46E5; padding-left: 15px; }
-        .step { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e7eb; }
-        .step-number { font-weight: bold; color: #4F46E5; font-size: 1.2em; margin-right: 10px; }
-        code { background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { text-align: left; padding: 12px; border: 1px solid #e5e7eb; }
-        th { background: #f3f4f6; }
-        .pro-tip { background: #ecfdf5; border-left: 5px solid #10b981; padding: 15px; margin: 20px 0; font-style: italic; }
-        .copyright { text-align: center; color: #6b7280; font-size: 0.85em; margin-top: 50px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
-        @media print { body { margin: 0; padding: 0; } .no-print { display: none; } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PitchCompare: Quick Start Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.65;
+      padding: 48px 24px 64px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1e293b;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #64748b;
+      margin-bottom: 40px;
+    }
+
+    /* Steps */
+    .step {
+      display: flex;
+      gap: 20px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .step-body strong:first-of-type {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+
+    .step-body p {
+      font-size: 0.925rem;
+      color: #475569;
+      margin-top: 6px;
+    }
+
+    .step-body ul {
+      margin: 8px 0 8px 18px;
+      font-size: 0.925rem;
+      color: #475569;
+    }
+
+    .step-body ul li {
+      margin-bottom: 4px;
+    }
+
+    code {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 0.85rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: #4f46e5;
+    }
+
+    /* Warning callout */
+    .warning {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #92400e;
+    }
+
+    .warning strong {
+      color: #78350f;
+    }
+
+    /* Pro-tip / logic box */
+    .pro-tip {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-left: 4px solid #4f46e5;
+      border-radius: 12px;
+      padding: 20px 24px;
+      font-size: 0.925rem;
+      color: #3730a3;
+      margin-top: 8px;
+    }
+
+    .pro-tip strong {
+      color: #312e81;
+    }
+
+    /* Copyright */
+    .copyright {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.8;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
 
     <h1>🚀 PitchCompare: Quick Start Guide</h1>
-    <p>Follow these five steps to set up your own pairwise pitch evaluation session.</p>
+    <p class="subtitle">Follow these five steps to set up your own pairwise pitch evaluation session.</p>
 
     <div class="step">
-        <span class="step-number">01</span> <strong>Create Your Account</strong>
-        <p>Go to the Professor Portal and click <strong>Sign Up</strong>. Enter your email and use the Invite Code: <code>JOIN-PITCH</code>. This grants you access to create and manage your own private Pitch Rooms.</p>
+      <div class="step-number">01</div>
+      <div class="step-body">
+        <strong>Create Your Account</strong>
+        <p>Go to the Professor Portal and click <strong>Sign Up</strong>. Enter your email and use the Invite Code: <code>JOIN-PITCH</code>. This grants you access to create and manage your own secure Pitch Rooms.</p>
+      </div>
     </div>
 
     <div class="step">
-        <span class="step-number">02</span> <strong>Initialize a Pitch Room</strong>
-        <p>In your dashboard, click <strong>+ New Pitch Room</strong>. Give it a recognizable name and a unique 6-character <strong>Room Code</strong> (e.g., <code>DEMO12</code>). This is the code you will share with your participants.</p>
+      <div class="step-number">02</div>
+      <div class="step-body">
+        <strong>Initialize a Pitch Room</strong>
+        <p>In your <strong>My Rooms</strong> dashboard, click <strong>+ New Pitch Room</strong>. Give it a recognizable name and a unique 6-character <strong>Room Code</strong> (e.g., <code>DEMO12</code>). <em>Note: Rooms are private to your account; other faculty cannot access your room data.</em></p>
+      </div>
     </div>
 
     <div class="step">
-        <span class="step-number">03</span> <strong>Upload Your Data</strong>
+      <div class="step-number">03</div>
+      <div class="step-body">
+        <strong>Upload Your Data</strong>
         <p>Download the CSV templates from the "About" page. You will need to upload two files:</p>
         <ul>
-            <li><strong>students.csv:</strong> Columns: <code>email</code>, <code>name</code>. (Only these users can vote).</li>
-            <li><strong>pitches.csv:</strong> Columns: <code>title</code>, <code>url</code>, <code>author_emails</code>. (Prevents authors from voting for their own work).</li>
+          <li><strong>students.csv:</strong> Columns: <code>email</code>, <code>name</code>. (Only these users can vote).</li>
+          <li><strong>pitches.csv:</strong> Columns: <code>title</code>, <code>url</code>, <code>author_emails</code>. (Prevents authors from voting for their own work).</li>
         </ul>
+        <div class="warning">
+          ⚠️&nbsp;<span><strong>Important:</strong> All video URLs must be hosted on YouTube (we highly recommend instructing students to set their visibility to <strong>"Unlisted"</strong>).</span>
+        </div>
+      </div>
     </div>
 
     <div class="step">
-        <span class="step-number">04</span> <strong>Launch the Session</strong>
-        <p>Share the URL and your <strong>Room Code</strong> with your group. We recommend asking each participant to complete <strong>10&ndash;15 comparisons</strong> for optimal leaderboard stability.</p>
+      <div class="step-number">04</div>
+      <div class="step-body">
+        <strong>Launch the Session</strong>
+        <p>Share the URL and your <strong>Room Code</strong> with your group. For optimal leaderboard stability, we recommend assigning <strong>5 to 10 comparisons</strong> per participant, depending on the length of the pitch videos.</p>
+      </div>
     </div>
 
     <div class="step">
-        <span class="step-number">05</span> <strong>Export Results</strong>
+      <div class="step-number">05</div>
+      <div class="step-body">
+        <strong>Export Results</strong>
         <p>Monitor progress in real-time. Once voting is complete, click <strong>Export Results</strong> to download a final CSV of the rankings and Elo scores.</p>
+      </div>
     </div>
 
     <div class="pro-tip">
-        <strong>The Logic:</strong> This system uses the <strong>Elo Rating System</strong> to capture collective intuition. It eliminates the "subjectivity trap" of traditional rubrics by focusing on simple, head-to-head comparisons.
+      <strong>The Logic:</strong> This system uses the <strong>Elo Rating System</strong> to capture collective intuition. It eliminates the "subjectivity trap" of traditional rubrics by focusing on simple, head-to-head comparisons.
     </div>
 
     <div class="copyright">
-        &copy; 2026 Matthew D. Regele. All rights reserved. <br>
-        PitchCompare is the intellectual property of Matthew D. Regele. Academic use is permitted with attribution.
+      &copy; 2026 Matthew D. Regele. All rights reserved. <br>
+      PitchCompare is the intellectual property of Matthew D. Regele. Academic use is permitted with attribution.
     </div>
 
+  </div>
 </body>
 </html>
