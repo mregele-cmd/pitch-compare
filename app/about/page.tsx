@@ -425,13 +425,13 @@ export default function AboutPage() {
             cols={[
               { name: "title",         required: true,  desc: 'Display name for the pitch (e.g. "Team Alpha – GreenBrew")' },
               { name: "url",           required: true,  desc: "Any YouTube URL format: watch?v=, youtu.be/, or /shorts/" },
-              { name: "author_emails", required: false, desc: "Comma-separated emails of team members. Used to filter pitches from their authors' queues." },
+              { name: "author_emails", required: false, desc: "Semicolon-separated emails of team members (commas also accepted). Used to filter pitches from their authors' queues." },
             ]}
           />
           <div className="mt-3 rounded-lg bg-slate-50 px-4 py-3 font-mono text-xs text-slate-600">
             title,url,author_emails<br />
-            "Team Alpha",https://www.youtube.com/watch?v=dQw4w9WgXcQ,"alice@uni.edu, bob@uni.edu"<br />
-            "Team Beta",https://youtu.be/xxxxxxxxxxx,charlie@uni.edu
+            Habit Technology Pivot,https://youtu.be/abc123xyz,alice@uni.edu; bob@uni.edu<br />
+            NovaMed AI Diagnostic,https://youtu.be/xxxxxxxxxxx,charlie@uni.edu
           </div>
         </div>
 

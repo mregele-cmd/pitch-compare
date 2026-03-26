@@ -79,7 +79,7 @@ function VoteInner() {
     const own = (allVideos ?? []).find((v) => {
       if (!v.author_emails) return false;
       return v.author_emails
-        .split(",")
+        .split(/[;,]\s*/)
         .map((e: string) => e.trim().toLowerCase())
         .includes(emailLower);
     });
@@ -92,7 +92,7 @@ function VoteInner() {
   function isOwnVideo(v: VideoSlot, studentEmail: string): boolean {
     if (!v.author_emails) return false;
     return v.author_emails
-      .split(",")
+      .split(/[;,]\s*/)
       .map((e) => e.trim().toLowerCase())
       .includes(studentEmail.toLowerCase());
   }

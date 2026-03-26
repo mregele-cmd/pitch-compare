@@ -42,8 +42,8 @@ function downloadRosterTemplate() {
 function downloadPitchTemplate() {
   const csv = [
     "title,url,author_emails",
-    '"Pitch Alpha",https://www.youtube.com/watch?v=dQw4w9WgXcQ,"alice@uni.edu, bob@uni.edu"',
-    '"Pitch Beta",https://youtu.be/xxxxxxxxxxx,charlie@uni.edu',
+    "Habit Technology Pivot,https://youtu.be/abc123xyz,student1@university.edu; student2@university.edu",
+    "NovaMed AI Diagnostic,https://youtu.be/def456uvw,student3@university.edu",
   ].join("\n") + "\n";
   const blob = new Blob([csv], { type: "text/csv" });
   const url  = URL.createObjectURL(blob);
@@ -61,13 +61,13 @@ function normalizeVideoUrl(raw: string): string {
   return m ? `https://www.youtube.com/watch?v=${m[1]}` : trimmed;
 }
 
-/** Trim whitespace and lowercase each email in a comma-separated string. */
+/** Trim whitespace and lowercase each email. Accepts semicolons or commas as delimiters. */
 function normalizeAuthorEmails(raw: string): string {
   return raw
-    .split(",")
+    .split(/[;,]\s*/)
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean)
-    .join(", ");
+    .join("; ");
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
